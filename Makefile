@@ -1,8 +1,8 @@
 CC=gcc
 AR=ar
 CFLAGS=-Wall -Werror -O0 -g -m64
-APP=
-OBJS=sysexec.o
+APP=test
+OBJS=test.o sysexec.o
 
 %.o: %.c
 	$(CC) -o $@ $(CFLAGS) -c $<
