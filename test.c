@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "sysexec.h"
 
@@ -76,13 +77,62 @@ static void test_sysexecpe(void)
 	test_sysexecp_generic(__FUNCTION__, 1);
 }
 
+static int pexec(char *buf, int len, char *type, char *fmt, ...)
+{
+	FILE *handle;
+	char cmd[256];
+	char *eol;
+	va_list ap;
+	int ret;
+
+	va_start(ap, fmt);
+	ret = vsnprintf(cmd, sizeof(cmd), fmt, ap);
+	va_end(ap);
+
+	if (ret < 0) {
+		printf("command too long: %s\n", fmt);
+		return -1;
+	}
+
+	handle = popen(cmd, type);
+	if (!handle) {
+		printf("popen() failed\n");
+		return -1;
+	}
+
+	fread(buf, len, sizeof(char), handle);
+	fclose(handle);
+	if ((eol = strchr(buf, '\n')))
+		*eol = 0;
+
+	return 0;
+}
+
+static void test_pexec(void)
+{
+	char buf[256];
+	int ret;
+
+	printf("testing: %s()\n", __FUNCTION__ + strlen("test_"));
+
+	setenv("ILAN", "nice", 0);
+
+	ret = pexec(buf, sizeof(buf), "r", "ILAN= echo ILAN=$ILAN");
+	if (ret)
+		return;
+
+	printf("child returned: %s\n", buf);
+	printf("parent: ILAN=%s\n", getenv("ILAN"));
+	printf("\n");
+}
+
 int main(int argc, char **argv)
 {
 	test_sysexec();
 	test_sysexece();
 	test_sysexecp();
 	test_sysexecpe();
-
+	test_pexec();
 	return 0;
 }
 
