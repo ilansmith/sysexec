@@ -140,26 +140,39 @@ int sysexec(char *fmt, ...)
 	return ret;
 }
 
-int sysexecpe(char *buf, int count, char **env, char *fmt, ...)
+static int __sysexecpe(char *buf, int count, char **env, char *fmt, va_list ap)
 {
-	va_list ap;
 	char *eol;
 	int fd;
+	int ret = -1;
 
-	va_start(ap, fmt);
 	fd = __sysexec(env, "r", fmt, ap);
-	va_end(ap);
 
 	if (fd == -1)
 		return -1;
 
-	read(fd, buf, count);
-	close(fd);
+	if (read(fd, buf, count) == -1)
+		goto exit;
 
 	if ((eol = strchr(buf, '\n')))
 		*eol = 0;
 
-	return 0;
+	ret = 0;
+exit:
+	close(fd);
+	return ret;
+}
+
+int sysexecpe(char *buf, int count, char **env, char *fmt, ...)
+{
+	va_list ap;
+	int ret;
+
+	va_start(ap, fmt);
+	ret = __sysexecpe(buf, count, env, fmt, ap);
+	va_end(ap);
+
+	return ret;
 }
 
 int sysexecp(char *buf, int count, char *fmt, ...)
@@ -168,7 +181,7 @@ int sysexecp(char *buf, int count, char *fmt, ...)
 	int ret;
 
 	va_start(ap, fmt);
-	ret = sysexecpe(buf, count, NULL, fmt, ap);
+	ret = __sysexecpe(buf, count, NULL, fmt, ap);
 	va_end(ap);
 
 	return ret;
